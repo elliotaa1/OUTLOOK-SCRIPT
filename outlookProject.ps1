@@ -1,20 +1,20 @@
-﻿###############################################################################################################################################################################
+###############################################################################################################################################################################
 # Author: Elliot Abou-Antoun
 # Date: March 13, 2025
-# Revision: 1.0 (Revised )
+# Revision: 1.1 (Revised March 21, 2025 )
 # Purpose: Automate the process of sending initial, reminder and final notice emails for evergreening project
 ###############################################################################################################################################################################
 ###############################################################################################################################################################################
 # Revision Notes.
 # 
+# Issue where sent emails would appear in personal inbox sent items and be labeled as personal user. (Resolved in code line 285, 286, 305.)
+# 
+# Issue where it applies personal inbox signatures to replies (Resolution is to turn off signature replies. STEPS TO DO SO IN THE README!!
+#
+# It currently looks through the last 500 emails from the top. This number can be lowered or raised at line 381, $FindMail.
 #
 #
-#
-#
-#
-#
-#
-#
+# Fixed issue where $EndFlag, line 380, would not reset back to 0 after every successful or failed attempt. Now counter resets to make sure we start from 0 up to 500 per user in array.
 #
 #
 #
@@ -282,6 +282,8 @@ function Append-TextWithBackgroundColor {
         return
     }
     Write-Host "Selected Account: $($accountToUse.DisplayName)"
+    $sharedMailbox = $namespace.Folders.Item($accountToUse.SmtpAddress)
+    $sentItemsFolder = $sharedMailbox.Folders.Item("Sent Items")
     if($emailSelection -eq "Initial Email") {
     foreach ($items in $dataList){
             $recipientEmail = "$($items.user)@cic.gc.ca"
@@ -296,12 +298,12 @@ function Append-TextWithBackgroundColor {
             $htmlBody = Get-Content '\\ircctech\tech\uploads\Deployment Team\Evergreening Email Tool\initialemail.html' -Raw -Encoding UTF8
             $htmlBody = $htmlBody -replace '\$asset', $asset
             $htmlBody = $htmlBody -replace '\$software', $software
-
+            $mail.SentOnBehalfOfName = $accountToUse.SmtpAddress
             $mail.HTMLBody = $htmlBody
             # Set To address
             $mail.To = $recipientEmail
+            $mail.SaveSentMessageFolder = $sentItemsFolder
 
-            $mail.SentOnBehalfOfName = $accountToUse.SmtpAddress
 
             $mail.Importance = 2
             $mail.ReadReceiptRequested = $true
@@ -376,8 +378,10 @@ if ($emailSelection -eq "Reminder Email") {
                 # Debug: print item details to check for correct properties
                # Write-Host "Checking item: Subject: $($item.Subject), To: $($item.To)"
                     $endflag += 1
-                if($endflag -eq 500){
+                    $FindMail = 500
+                if($endflag -eq $FindMail){
                     Append-TextWithBackgroundColor "`nCould not find $searchSubject with $searchRecipientEmail in sent items folder within $endflag searches.`n" -backColorName "Yellow"
+                    $endFlag = 0
                     break
                 }
 
@@ -392,12 +396,12 @@ if ($emailSelection -eq "Reminder Email") {
                     $replyMail.Subject = "REMINDER:RE:ACTION REQUIRED: Replace your aging work device / Remplacez votre appareil de travail vieillissant"
                     $htmlBody = Get-Content '\\ircctech\tech\uploads\Deployment Team\Evergreening Email Tool\reminderemail.html' -Raw -Encoding UTF8
                     $replyMail.HTMLBody = $replyMail.HTMLBody.Insert(0, $htmlbody)
-                    $replyMail.Save()
+                    $replyMail.SentOnBehalfOfName = $accountToUse.SmtpAddress
                     $replyMail.to = $recipientEmail
                     # You can add custom HTML or text for the reply body
 
                     # Set the "SentOnBehalfOfName" property to ensure the reply is sent from the correct account
-                    $replyMail.SentOnBehalfOfName = $accountToUse.SmtpAddress
+                    $replyMail.SaveSentMessageFolder = $sentItemsFolder
 
            
 
@@ -407,7 +411,9 @@ if ($emailSelection -eq "Reminder Email") {
                     # Log success
                     $addBox.AppendText("`nReminder Email sent successfully to: $searchRecipientEmail`n")
                     $addBox.AppendText("Reminder email sent.`n")
+                    $endFlag = 0
                     $matchFound = $true
+                    break
                     
                 }
             }
@@ -447,10 +453,10 @@ if($emailSelection -eq "Final Notice Email") {
             $htmlBody = $htmlBody -replace '\$date', $date
 
             $mail.HTMLBody = $htmlBody
-            # Set To address
-            $mail.To = $recipientEmail
-
             $mail.SentOnBehalfOfName = $accountToUse.SmtpAddress
+            $mail.To = $recipientEmail
+            $mail.SaveSentMessageFolder = $sentItemsFolder
+           
 
             $mail.Importance = 2
             $mail.ReadReceiptRequested = $true
