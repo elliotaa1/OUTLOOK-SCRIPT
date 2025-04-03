@@ -9,7 +9,7 @@
 # 
 # Issue where sent emails would appear in personal inbox sent items and be labeled as personal user. (Resolved in code line 285, 286, 305.)
 # 
-# Issue where it applies personal inbox signatures to replies (Resolution is to turn off signature replies. STEPS TO DO SO IN THE README!!
+# Issue where it applies personal inbox signatures to replies (Resolution is to turn off signature replies. STEPS TO DO SO IN THE README!!)
 #
 # It currently looks through the last 500 emails from the top. This number can be lowered or raised at line 381, $FindMail.
 #
@@ -67,8 +67,10 @@ $namespace = $outlook.GetNamespace("MAPI")
 # Get the accounts in Outlook
 $accounts = $namespace.Accounts
 
+$accounts | ForEach-Object {$deviceComboBox.Items.Add($($_.SmtpAddress))}
+
 # Display the available accounts
- $deviceComboBox.Items.Add("IRCC.ITTechnologiesDelivery-LivraisondeTechnologies.IRCC@cic.gc.ca") 
+#$deviceComboBox.Items.Add($accountName) 
 
 $deviceComboBox.Location = New-Object System.Drawing.Point(20, 125)
 $deviceComboBox.Text = "Select email address"
