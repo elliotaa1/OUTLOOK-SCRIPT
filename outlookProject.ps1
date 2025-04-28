@@ -1,7 +1,7 @@
 ###############################################################################################################################################################################
 # Author: Elliot Abou-Antoun
 # Date: March 13, 2025
-# Revision: 1.1 (Revised March 21, 2025 )
+# Revision: 1.2 (Revised April 28, 2025 )
 # Purpose: Automate the process of sending initial, reminder and final notice emails for evergreening project
 ###############################################################################################################################################################################
 ###############################################################################################################################################################################
@@ -19,7 +19,7 @@
 #
 #
 #
-#
+# April 28, 2025: Final Reminders now operates via BCC. It generates a singular email, and the same email will be sent to all BCC recipients. Line 442 onwards
 #
 #
 #
@@ -440,12 +440,16 @@ if ($emailSelection -eq "Reminder Email") {
 
 
 if($emailSelection -eq "Final Notice Email") {
+    $bccRecipients = @()
     foreach ($items in $dataList){
             $date = $items.date
             $recipientEmail = "$($items.user)@cic.gc.ca"
             $username = $items.user
             $asset = $items.asset
             $software = $items.software
+
+            $bccRecipients += $recipientEmail
+            }
 
             # Create a new email item
             $mail = $outlook.CreateItem(0)
@@ -456,7 +460,8 @@ if($emailSelection -eq "Final Notice Email") {
 
             $mail.HTMLBody = $htmlBody
             $mail.SentOnBehalfOfName = $accountToUse.SmtpAddress
-            $mail.To = $recipientEmail
+            $mail.To = $accountToUse.SmtpAddress
+            $mail.BCC = ($bccRecipients -join ";")
             $mail.SaveSentMessageFolder = $sentItemsFolder
            
 
@@ -466,7 +471,7 @@ if($emailSelection -eq "Final Notice Email") {
             # Display the email (for review)
             $mail.Display()
             #$mail.Send()
-    }
+    
     $addBox.AppendText("`nFinal Notice Emails sent successfully from account: $($accountToUse.DisplayName)")
      $Generatebutton.Enabled = $false
     if($Generatebutton.Enabled -eq $false) {
